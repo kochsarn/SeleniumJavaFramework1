@@ -12,10 +12,10 @@ public class ExceptionHandlingDemo {
 
 }	
 	
-	public static void demo()  throws ArithmeticException {
+	public static void demo()  {
 		System.out.println("Hello World");
-		throw new ArithmeticException("not valid operation");
-		int i = 10/0;				
+	//	throw new ArithmeticException("not valid operation");
+		 int i = 10/1;				
 		System.out.println("Completed");
 }
 

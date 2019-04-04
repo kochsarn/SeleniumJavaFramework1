@@ -1,65 +1,152 @@
 package demo;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.concurrent.TimeUnit;
+
+
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.remote.DesiredCapabilities;
-import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
 
+import com.applitools.eyes.BatchInfo;
+import com.applitools.eyes.RectangleSize;
+import com.applitools.eyes.TestResults;
 import com.applitools.eyes.selenium.Eyes;
+import com.applitools.eyes.selenium.fluent.Target;
 
 
-class HelloWorld {
+public  class HelloWorld {
+    static private String  appName  = "Helo World App";
 
-	public static void main(String[] args) throws MalformedURLException {
+    // change the value of testName so that it has a unique value on your Eyes system
+    static private String  testName = "Helo World test";
 
-		// Initialize the eyes SDK and set your private API key.
-		Eyes eyes = new Eyes();
-		eyes.setApiKey("XJOAUur9RmBlwPYMcMlAtj6E106WI8HpU8FryB5pMSV108g110");
+    // if you have a dedicated Eyes server, set the value of the variable serverURLstr to your URL
+    static String serverURLstr = "https://eyesapi.applitools.com";
 
-		// Set the desired capabilities.
-		DesiredCapabilities dc = new DesiredCapabilities();
+    //set the value of runAsBatch to true so that the tests run as a single batch
+    static private Boolean runAsBatch = true;
 
-		dc.setCapability("platformName", "Android");
-		dc.setCapability("platformVersion", "PLATFORM_VERSION");
-		dc.setCapability("browserName", "BROWSER_NAME");
-		dc.setCapability("deviceName", "DEVICE_NAME");
+    // set the value of changeTest to true to introduce changes that Eyes will detect as mismatches
+    static private Boolean changeTest = false;
 
-		// Open browser.
-		WebDriver driver = new RemoteWebDriver(new URL("http://127.0.0.1:4723/wd/hub"), dc);
-		driver.manage().timeouts().implicitlyWait(60, TimeUnit.SECONDS);
+    static private String  weburl = "https://applitools.com/helloworld2";
 
-		try {
+    public static void main(String[] args) {
+        URI serverURL;
+        try {
+            serverURL = new URI(serverURLstr);
+        } catch (URISyntaxException e) {
+            System.out.println("URI Exception ");
+            return;
+        }
+        Eyes eyes = new Eyes();
+        setup(eyes);
 
-			// Start the test.
-			eyes.open(driver, "Hello World!", "My first Appium web Java test!");
+        RectangleSize viewportSizeLandscape = new RectangleSize(/*width*/ 1024, /*height*/ 768 );
+        RectangleSize viewportSizePortrait = new RectangleSize(/*width*/ 500, /*height*/ 900 );
+        WebDriver innerDriver = new ChromeDriver();  // Open a Chrome browser.
 
-			// Navigate the browser to the "hello world!" web-site.
-			driver.get("https://applitools.com/helloworld");
+        if (!changeTest) {
+            test01(innerDriver, eyes, viewportSizeLandscape);
+            test01(innerDriver, eyes, viewportSizePortrait);
+        } else {
+            test01Changed(innerDriver, eyes, viewportSizeLandscape);
+            test01Changed(innerDriver, eyes, viewportSizePortrait);
+        }
+        innerDriver.quit();
+    }
 
-			// Visual validation point #1.
-			eyes.checkWindow("Hello!");
+    static private void test01(WebDriver innerDriver, Eyes eyes, RectangleSize viewportSize) {
+        // Start the test and set the browser's viewport size
+        WebDriver driver = eyes.open(innerDriver, appName, testName, viewportSize);
+        try {
+            driver.get(weburl);
+            eyes.checkWindow("Before enter name");                 // Visual checkpoint 1
 
-			// Click the "Click me!" button.
-			driver.findElement(By.tagName("button")).click();
+            driver.findElement(By.id("name")).sendKeys("My Name"); //enter the name
+            eyes.checkWindow("After enter name");                  // Visual checkpoint 2
 
-			// Visual validation point #2.
-			eyes.checkWindow("Click!");
+            driver.findElement(By.tagName("button")).click();      // Click the  button
+            eyes.checkWindow("After Click");                       // Visual checkpoint 3
 
-			// End the test.
-			eyes.close();
+            TestResults result = eyes.close(false); //false means don't thow exception for failed tests
+            handleResult(result);
+        } finally {
+            eyes.abortIfNotClosed();
+        }
+    }
+	
+    static private void test01Changed(WebDriver innerDriver, Eyes eyes, RectangleSize viewportSize) {
+        TestResults result;
 
-		} finally {
+        // Start the test and set the browser's viewport size
+        WebDriver driver = eyes.open(innerDriver, appName, testName, viewportSize);
+        try {
+            String webUrlToUse = weburl;
 
-			// Close the browser.
-			driver.quit();
+            if (changeTest) {
+                webUrlToUse += "?diff2";
+            }
 
-			// If the test was aborted before eyes.close was called, ends the test as aborted.
-			eyes.abortIfNotClosed();
+            driver.get(webUrlToUse);                                // Navigate the browser to the web-site.
+            if (!changeTest) {
+                eyes.checkWindow(" Before enter name");   			// skip visual checkpoint number 1
+            }
 
-		}
-	}
+            driver.findElement(By.id("name")).sendKeys("My Name");  // enter the name
+            eyes.checkWindow("After enter name)");                  //visual checkpoint number 2
+
+            driver.findElement(By.tagName("button")).click();      // Click the "Click me!" button.
+            eyes.checkWindow("After click");                       // Visual checkpoint 3
+
+            if (changeTest) {
+                eyes.checkWindow("After click again");    			// additional visual checkpoint 4
+            }
+
+            result = eyes.close(false);
+            handleResult(result);
+        } finally {
+            eyes.abortIfNotClosed();
+        }
+    }
+
+    static private  void handleResult(TestResults result) {
+        String resultStr;
+        String url;
+        if (result == null) {
+            resultStr = "Test aborted";
+            url = "undefined";
+        } else {
+            url = result.getUrl();
+            int totalSteps = result.getSteps();
+            if (result.isNew()) {
+                resultStr = "New Baseline Created: " + totalSteps + " steps";
+            } else if (result.isPassed()) {
+                resultStr = "All steps passed:     " + totalSteps + " steps";
+            } else {
+                resultStr = "Test Failed     :     " + totalSteps + " steps";
+                resultStr += " matches=" +  result.getMatches();      /*  matched the baseline */
+                resultStr += " missing=" + result.getMissing();       /* missing in the test*/
+                resultStr += " mismatches=" + result.getMismatches(); /* did not match the baseline */
+            }
+        }
+        resultStr += "\n" + "results at " + url;
+        System.out.println(resultStr);
+    }
+ 
+	
+	static private void setup(Eyes eyes) {
+        //String apiKey = System.getenv("APPLITOOLS_API_KEY");
+        String apiKey = System.getenv("XJOAUur9RmBlwPYMcMlAtj6E106WI8HpU8FryB5pMSV108g110");
+        eyes.setApiKey(apiKey);
+        if (runAsBatch) {
+            BatchInfo batchInfo = new BatchInfo("Hello World 2 Batch");
+            eyes.setBatch(batchInfo);
+        }
+
+        //eliminate artifacts caused by a blinking cursor - on by default in latest SDK
+        eyes.setIgnoreCaret(true);
+    }
 }
 
