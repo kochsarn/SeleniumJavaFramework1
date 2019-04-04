@@ -10,7 +10,7 @@ import org.openqa.selenium.remote.DesiredCapabilities;
 
 public class SauceLabsDemo {
 	public static final String USERNAME = "watchara";
-	public static final String ACCESS_KEY = "59363426-673a-4b42-bb94-05ea4f688d23"; // It is not your password!
+	public static final String ACCESS_KEY = "586bd392-c07a-4f84-8499-cca6e7150b66"; // It is not your password!
 	public static final String URL = "http://" + USERNAME + ":" + ACCESS_KEY + "@ondemand.saucelabs.com:80/wd/hub";
 
 	public static void main(String[] args) throws MalformedURLException {
